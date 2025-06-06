@@ -231,6 +231,9 @@ namespace CinemaManagementSystem.Infrastructure.Migrations
                     b.Property<DateTime>("ExpirationDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("Id")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsUsed")
                         .HasColumnType("bit");
 

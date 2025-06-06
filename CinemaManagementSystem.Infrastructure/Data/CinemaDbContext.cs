@@ -16,7 +16,9 @@ public class CinemaDbContext : DbContext
     public DbSet<Discount> Discounts { get; set; }
     public DbSet<UserDiscount> UserDiscounts { get; set; }
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+
+
+protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 

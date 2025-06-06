@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  webapi:
+    build:
+      context: .
+      dockerfile: CinemaManagementSystem.WebAPI/Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      - ASPNETCORE_URLS=http://*:8080 
+      - DOTNET_USE_POLLING_FILE_WATCHER=1
+    container_name:
+        cinemanagement_webapi
+
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      SA_PASSWORD: "Your_password123"
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlvolume:/var/opt/mssql
+    healthcheck:
+      test: [ "CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P Your_password123 -Q 'SELECT 1'" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  sqlvolume:
+
