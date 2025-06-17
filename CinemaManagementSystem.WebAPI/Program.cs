@@ -1,103 +1,143 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
 using System.Text;
+using System.Threading;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Microsoft.OpenApi.Models;
+using FluentValidation.AspNetCore;
+
+using CinemaManagementSystem.Core.Entities;
 using CinemaManagementSystem.Infrastructure;
-using CinemaManagementSystem.WebAPI.Helpers;
+using CinemaManagementSystem.Infrastructure.Logging;
+using CinemaManagementSystem.Infrastructure.Repositories;
+using CinemaManagementSystem.Infrastructure.Services;
+using CinemaManagementSystem.WebAPI;
+
 using Application.Authentication;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
-using CinemaManagementSystem.Infrastructure.Repositories;
-using CinemaManagementSystem.Infrastructure.Services;
 using Application.Authorization.YourProject.Authorization;
-using Microsoft.AspNetCore.Authorization;
-using CinemaManagementSystem.Infrastructure.Logging;
-using FluentValidation.AspNetCore;
+
 using Contracts.Validators.UserValidator;
-
-
+using CinemaManagementSystem.WebAPI.extensions;
+using Contracts.Validators.TicketValidators;
+using Contracts.Validators.SessionValidators;
+using Contracts.Validators.SaleValidators;
 
 public class Program
 {
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+        var services = builder.Services;
+        var config = builder.Configuration;
 
-        // ?? Налаштування рядка підключення до БД
-        var connection = builder.Configuration.GetConnectionString("DefaultConnection");
-        builder.Services.AddDbContext<CinemaDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
-        sqlOptions =>
-        {
-            sqlOptions.EnableRetryOnFailure(
-                maxRetryCount: 5,
-                maxRetryDelay: TimeSpan.FromSeconds(10),
-                errorNumbersToAdd: null);
-        }));
+        // ---------- Configuration ----------
+        var connectionString = config.GetConnectionString("DefaultConnection");
+        var jwtOptionsSection = config.GetSection("JwtOptions");
+        services.Configure<JwtOptions>(jwtOptionsSection);
+        var jwtOptions = jwtOptionsSection.Get<JwtOptions>();
 
+        // ---------- Database ----------
+        services.AddDbContext<CinemaDbContext>(options =>
+            options.UseSqlServer(connectionString, sql =>
+                sql.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null)));
 
-        // ?? Конфігурація JWT
-        var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-        builder.Services.Configure<JwtSettings>(jwtSettings);
+        // ---------- Authentication ----------
+        services.AddScoped<IPasswordHasher, PasswordHasher>();
+        services.AddScoped<IJwtProvider, JwtProvider>();
+        services.AddApiAuth(Options.Create(jwtOptions)); // JWT + Auth cookie setup
 
-        // ?? Інжекція залежностей
-        builder.Services.AddScoped<ITokenService, TokenService>();
-        builder.Services.AddScoped<IUserRepository, UserRepository>();
-        builder.Services.AddScoped<IUserService, UserService>();
-        builder.Services.AddScoped<ITicketRepository, TicketRepository>();
-        builder.Services.AddScoped<ITicketService, TicketService>();
-        builder.Services.AddScoped<IHallRepository, HallRepository>();
-        builder.Services.AddScoped<IHallService, HallService>();
-        builder.Services.AddScoped<IFilmRepository, FilmRepository>();
-        builder.Services.AddScoped<IFilmService, FilmService>();
-        builder.Services.AddScoped<ISessionRepository, SessionRepository>();
-        builder.Services.AddScoped<ISessionService, SessionService>();
-        builder.Services.AddScoped<ISaleRepository, SaleRepository>();
-        builder.Services.AddScoped<ISaleService, SaleService>();
-        builder.Services.AddScoped<IDiscountRepository, DiscountRepository>();
-        builder.Services.AddScoped<IDiscountService, DiscountService>();
-        builder.Services.AddScoped(typeof(IAppLogger<>), typeof(AppLogger<>));
+        // ---------- Repositories & Services ----------
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IUserService, UserService>();
+        services.AddScoped<ITicketRepository, TicketRepository>();
+        services.AddScoped<ITicketService, TicketService>();
+        services.AddScoped<IHallRepository, HallRepository>();
+        services.AddScoped<IHallService, HallService>();
+        services.AddScoped<IFilmRepository, FilmRepository>();
+        services.AddScoped<IFilmService, FilmService>();
+        services.AddScoped<ISessionRepository, SessionRepository>();
+        services.AddScoped<ISessionService, SessionService>();
+        services.AddScoped<ISaleRepository, SaleRepository>();
+        services.AddScoped<ISaleService, SaleService>();
+        services.AddScoped<IDiscountRepository, DiscountRepository>();
+        services.AddScoped<IDiscountService, DiscountService>();
+        services.AddScoped(typeof(IAppLogger<>), typeof(AppLogger<>));
 
-        builder.Services.AddControllers()
-    .AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblyContaining<LoginDtoValidator>());
-
-
-        // ?? JWT Аутентифікація
-        builder.Services.AddAuthentication(options =>
-        {
-            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-        })
-        .AddJwtBearer(options =>
-        {
-            var config = jwtSettings.Get<JwtSettings>();
-            options.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuer = true,
-                ValidateAudience = true,
-                ValidateLifetime = true,
-                ValidateIssuerSigningKey = true,
-                ValidIssuer = config.Issuer,
-                ValidAudience = config.Audience,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config.SecretKey))
-            };
-        });
-        builder.Services.AddHttpContextAccessor();
-
-        builder.Services.AddAuthorization(options =>
+        // ---------- Authorization ----------
+        services.AddAuthorization(options =>
         {
             options.AddPolicy("ResourceOwnerOrAdmin", policy =>
                 policy.Requirements.Add(new ResourceOwnerOrAdminRequirement()));
         });
+        services.AddSingleton<IAuthorizationHandler, ResourceOwnerOrAdminHandler>();
+        services.AddHttpContextAccessor();
 
-        builder.Services.AddSingleton<IAuthorizationHandler, ResourceOwnerOrAdminHandler>();
-        // ?? Контролери
-        builder.Services.AddControllers();
+        // ---------- Validation ----------
+        services.AddControllers()
+                .AddFluentValidation(fv =>
+                    fv.RegisterValidatorsFromAssemblyContaining<LoginDtoValidator>());
+        services.AddControllers()
+    .AddFluentValidation(fv =>
+        fv.RegisterValidatorsFromAssemblyContaining<RegisterDTOValidator>());
+        services.AddControllers()
+    .AddFluentValidation(fv =>
+        fv.RegisterValidatorsFromAssemblyContaining<UpdateDTOValidator>());
+        services.AddControllers()
+    .AddFluentValidation(fv =>
+        fv.RegisterValidatorsFromAssemblyContaining<UserDTOValidator>());
+        services.AddControllers()
+    .AddFluentValidation(fv =>
+        fv.RegisterValidatorsFromAssemblyContaining<CreateTicketDTOValidator>());
+        services.AddControllers()
+    .AddFluentValidation(fv =>
+        fv.RegisterValidatorsFromAssemblyContaining<TicketDtoValidator>());
+        services.AddControllers()
+    .AddFluentValidation(fv =>
+        fv.RegisterValidatorsFromAssemblyContaining<UpdateTicketDTOValidator>());
+        services.AddControllers()
+    .AddFluentValidation(fv =>
+        fv.RegisterValidatorsFromAssemblyContaining<CreateSessionDtoValidator>());
+        services.AddControllers()
+    .AddFluentValidation(fv =>
+        fv.RegisterValidatorsFromAssemblyContaining<SessionDtoValidator>());
+        services.AddControllers()
+    .AddFluentValidation(fv =>
+        fv.RegisterValidatorsFromAssemblyContaining<UpdateSessionDtoValidator>());
+        services.AddControllers()
+    .AddFluentValidation(fv =>
+        fv.RegisterValidatorsFromAssemblyContaining<CreateSaleDtoValidator>());
+        services.AddControllers()
+    .AddFluentValidation(fv =>
+        fv.RegisterValidatorsFromAssemblyContaining<SaleDtoValidator>());
+        services.AddControllers()
+    .AddFluentValidation(fv =>
+        fv.RegisterValidatorsFromAssemblyContaining<UpdateSaleDtoValidator>());
+        services.AddControllers()
+    .AddFluentValidation(fv =>
+        fv.RegisterValidatorsFromAssemblyContaining<CreateFilmDtoValidator>());
+        services.AddControllers()
+    .AddFluentValidation(fv =>
+        fv.RegisterValidatorsFromAssemblyContaining<FilmDtoValidator>());
+        services.AddControllers()
+    .AddFluentValidation(fv =>
+        fv.RegisterValidatorsFromAssemblyContaining<UpdateFilmDtoValidator>());
+        services.AddControllers()
+    .AddFluentValidation(fv =>
+        fv.RegisterValidatorsFromAssemblyContaining<CreateDiscountDtoValidator>());
+        services.AddControllers()
+    .AddFluentValidation(fv =>
+        fv.RegisterValidatorsFromAssemblyContaining<DiscountDtoValidator>());
+        services.AddControllers()
+    .AddFluentValidation(fv =>
+        fv.RegisterValidatorsFromAssemblyContaining<UserDiscountDtoValidator>());
 
-        // ?? Swagger з підтримкою авторизації через JWT
-        builder.Services.AddEndpointsApiExplorer();
-        builder.Services.AddSwaggerGen(options =>
+
+        // ---------- Swagger ----------
+        services.AddEndpointsApiExplorer();
+        services.AddSwaggerGen(options =>
         {
             options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
             {
@@ -106,47 +146,55 @@ public class Program
                 Scheme = "Bearer",
                 BearerFormat = "JWT",
                 In = ParameterLocation.Header,
-                Description = "Введіть JWT токен у форматі: Bearer {your token}"
+                Description = "Enter JWT token in the format: Bearer {your token}"
             });
 
             options.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
             {
-                Reference = new OpenApiReference
                 {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
+                    new OpenApiSecurityScheme
+                    {
+                        Reference = new OpenApiReference
+                        {
+                            Type = ReferenceType.SecurityScheme,
+                            Id = "Bearer"
+                        }
+                    },
+                    Array.Empty<string>()
                 }
-            },
-            new string[] {}
-        }
-    });
+            });
         });
 
+        // ---------- Build App ----------
         var app = builder.Build();
 
-        // ?? Middleware
-        if (app.Environment.IsProduction())
+        app.UseSwagger();
+        app.UseSwaggerUI();
+
+        app.Use(async (context, next) =>
         {
-            app.UseSwagger();
-            app.UseSwaggerUI();
-        }
+            if (!context.Request.Headers.ContainsKey("Authorization") &&
+                context.Request.Cookies.TryGetValue("tasty-cookies", out var token))
+            {
+                context.Request.Headers.Authorization = $"Bearer {token}";
+            }
 
-        //app.UseHttpsRedirection();
+            await next();
+        });
 
-        app.UseAuthentication(); // Обов’язково перед Authorization
+
+        // app.UseHttpsRedirection(); // Optional for dev/test
+        app.UseAuthentication();
         app.UseAuthorization();
 
         app.MapControllers();
 
+        // ---------- Apply Migrations with Retry ----------
         using (var scope = app.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<CinemaDbContext>();
-
-            var retryCount = 0;
-            var maxRetries = 5;
+            const int maxRetries = 5;
+            int retryCount = 0;
 
             while (true)
             {
@@ -157,15 +205,12 @@ public class Program
                 }
                 catch (Microsoft.Data.SqlClient.SqlException)
                 {
-                    if (++retryCount >= maxRetries)
-                        throw;
-                    Thread.Sleep(2000); // зачекати 2 сек і повторити
+                    if (++retryCount >= maxRetries) throw;
+                    Thread.Sleep(2000);
                 }
             }
         }
 
         app.Run();
-
-
     }
 }

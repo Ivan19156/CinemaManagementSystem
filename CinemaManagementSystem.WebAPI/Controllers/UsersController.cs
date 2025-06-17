@@ -12,6 +12,7 @@ namespace CinemaManagementSystem.WebAPI.Controllers
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.AspNetCore.Http;
     using global::CinemaManagementSystem.Infrastructure.Logging;
+    using Application.Authentication;
 
     namespace CinemaManagementSystem.WebAPI.Controllers
     {
@@ -21,11 +22,14 @@ namespace CinemaManagementSystem.WebAPI.Controllers
         {
             private readonly IUserService _userService;
             private readonly IAppLogger<UsersController> _logger;
+            private readonly IJwtProvider _jwtProvider;
 
-            public UsersController(IUserService userService, IAppLogger<UsersController> logger)
+            public UsersController(IUserService userService, IAppLogger<UsersController> logger, IJwtProvider jwtProvider)
             {
                 _userService = userService;
                 _logger = logger;
+                _jwtProvider = jwtProvider;
+
             }
 
             [HttpGet]
@@ -106,10 +110,39 @@ namespace CinemaManagementSystem.WebAPI.Controllers
                     _logger.LogWarning($"Login failed for email={dto.Email}: {result.Message}");
                     return Unauthorized(result.Message);
                 }
+                var token = result.Data;
+                Response.Cookies.Append("auth_token", token, new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true, // ensure you're using HTTPS in production
+                    SameSite = SameSiteMode.Strict,
+                    Expires = DateTimeOffset.UtcNow.AddHours(1)
+                });
 
                 _logger.LogInfo($"Login succeeded for email={dto.Email}");
                 return Ok(result.Data);
             }
+
+            [HttpPost("logout")]
+            [Authorize] // Optional, depending on whether only authenticated users can call logout
+            [ProducesResponseType(StatusCodes.Status200OK)]
+            public IActionResult Logout()
+            {
+                // Remove the auth_token cookie by setting it with an expired date
+                Response.Cookies.Append("auth_token", "", new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.Strict,
+                    Expires = DateTimeOffset.UtcNow.AddDays(-1) // Expire the cookie immediately
+                });
+
+                // Optionally log the action
+                _logger.LogInfo("User logged out.");
+
+                return Ok(new { message = "Logged out successfully." });
+            }
+
 
             [HttpPut("{id}")]
             [Authorize(Policy = "ResourceOwnerOrAdmin")]

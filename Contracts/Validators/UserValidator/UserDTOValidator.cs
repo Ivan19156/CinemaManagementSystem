@@ -5,22 +5,19 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using FluentValidation;
-
 
 namespace Contracts.Validators.UserValidator;
 
-
-public class LoginDtoValidator : AbstractValidator<LoginDto>
+public class UserDTOValidator : AbstractValidator<UserDto>
 {
-    public LoginDtoValidator()
+    public UserDTOValidator()
     {
+        RuleFor(x => x.Id)
+            .GreaterThan(0).WithMessage("Id must be greater than 0.");
+        RuleFor(x => x.Name)
+            .NotEmpty().WithMessage("Name is required.");
         RuleFor(x => x.Email)
             .NotEmpty().WithMessage("Email is required.")
             .EmailAddress().WithMessage("Invalid email format.");
-
-        RuleFor(x => x.Password)
-            .NotEmpty().WithMessage("Password is required.")
-            .MinimumLength(6).WithMessage("Password must be at least 6 characters.");
     }
 }
