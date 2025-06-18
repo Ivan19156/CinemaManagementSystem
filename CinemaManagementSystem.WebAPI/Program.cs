@@ -182,6 +182,7 @@ public class Program
             await next();
         });
 
+        app.UseMiddleware<ExceptionHandlingMiddleware>();
 
         // app.UseHttpsRedirection(); // Optional for dev/test
         app.UseAuthentication();
