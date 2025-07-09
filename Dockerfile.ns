@@ -1,0 +1,23 @@
+# === Build stage ===
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /app
+
+# Копіюємо csproj файли (залежності мають бути в окремих проєктах, якщо є)
+COPY TicketStatsService/TicketStatsService.csproj ./TicketStatsService/
+COPY Contracts/Contracts.csproj ./Contracts/
+
+# Відновлення NuGet-пакетів
+RUN dotnet restore ./TicketStatsService/TicketStatsService.csproj
+
+# Копіюємо весь код
+COPY . .
+
+# Публікуємо
+RUN dotnet publish TicketStatsService/TicketStatsService.csproj -c Release -o /app/publish
+
+# === Runtime stage ===
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+WORKDIR /app
+COPY --from=build /app/publish .
+
+ENTRYPOINT ["dotnet", "TicketStatsService.dll"]

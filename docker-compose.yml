@@ -1,19 +1,64 @@
-version: '3.8'
+﻿version: '3.8'
 
 services:
   webapi:
     build:
-      context: .
-      dockerfile: CinemaManagementSystem.WebAPI/Dockerfile
+      context: ./backend
+      dockerfile: WebAPI/Dockerfile
     ports:
       - "8080:8080"
     depends_on:
       - db
+      - rabbitmq
     environment:
       - ASPNETCORE_URLS=http://*:8080 
       - DOTNET_USE_POLLING_FILE_WATCHER=1
-    container_name:
-        cinemanagement_webapi
+    container_name: cinemanagement_webapi
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+
+  ticketstats:
+    build:
+      context: ./backend
+      dockerfile: NotificationService/Dockerfile
+    ports:
+      - "8081:8080"
+    depends_on:
+      - rabbitmq
+      - mongo
+    environment:
+      - ASPNETCORE_URLS=http://*:8080
+      - DOTNET_USE_POLLING_FILE_WATCHER=1
+    container_name: notification_microservice
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    container_name: cinema_frontend
+    depends_on:
+      - webapi
+    environment:
+      - VITE_API_URL=http://webapi:8080/api  # ✅ змінено localhost на назву сервісу
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    container_name: rabbitmq_broker
 
   db:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -29,7 +74,20 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    container_name: cinemanagement_db
+
+  mongo:
+    image: mongo:latest
+    container_name: mongo_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: ticketstats
 
 volumes:
   sqlvolume:
+  mongo_data:
+
 

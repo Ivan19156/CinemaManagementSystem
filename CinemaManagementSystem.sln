@@ -3,13 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.12.35707.178
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CinemaManagementSystem.Core", "Data\CinemaManagementSystem.Core.csproj", "{0B372158-83BB-47B4-8978-B91CFC328CB7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core", "Core\CinemaManagementSystem.Core.csproj", "{0B372158-83BB-47B4-8978-B91CFC328CB7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CinemaManagementSystem.Infrastructure", "CinemaManagementSystem.Infrastructure\CinemaManagementSystem.Infrastructure.csproj", "{4E8456D1-F362-4F73-A874-33BA41CC4EDB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "Infrastructure\CinemaManagementSystem.Infrastructure.csproj", "{4E8456D1-F362-4F73-A874-33BA41CC4EDB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CinemaManagementSystem.WebAPI", "CinemaManagementSystem.WebAPI\CinemaManagementSystem.WebAPI.csproj", "{DDDD08E0-F028-4A76-BA6D-B9A6BCE2D517}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebAPI", "WebAPI\CinemaManagementSystem.WebAPI.csproj", "{DDDD08E0-F028-4A76-BA6D-B9A6BCE2D517}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CinemaManagementSystem.Test", "CinemaManagementSystem.Test\CinemaManagementSystem.Test.csproj", "{45B18398-98E8-4D8B-AB82-8B323E537303}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test", "Test\CinemaManagementSystem.Test.csproj", "{45B18398-98E8-4D8B-AB82-8B323E537303}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "Application\Application.csproj", "{9A720163-7999-4A93-9DF3-B94DD1056DA2}"
 EndProject
@@ -21,6 +21,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		docker-compose.yml = docker-compose.yml
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NotificationService", "NotificationService\NotificationService.csproj", "{D1896258-7DC3-493D-8290-0934F70EAE2B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Common", "Common\Common.csproj", "{EFE02EA7-FE6F-4DD4-ADB4-C27A26493F27}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -56,6 +60,14 @@ Global
 		{8AC34DA1-B218-4FD0-BCF4-E380ED3D5F5B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8AC34DA1-B218-4FD0-BCF4-E380ED3D5F5B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8AC34DA1-B218-4FD0-BCF4-E380ED3D5F5B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D1896258-7DC3-493D-8290-0934F70EAE2B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D1896258-7DC3-493D-8290-0934F70EAE2B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D1896258-7DC3-493D-8290-0934F70EAE2B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D1896258-7DC3-493D-8290-0934F70EAE2B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EFE02EA7-FE6F-4DD4-ADB4-C27A26493F27}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EFE02EA7-FE6F-4DD4-ADB4-C27A26493F27}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EFE02EA7-FE6F-4DD4-ADB4-C27A26493F27}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EFE02EA7-FE6F-4DD4-ADB4-C27A26493F27}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
