@@ -11,6 +11,7 @@ import {
   List,
   ListItem,
   Paper,
+  Dialog,
 } from "@mui/material";
 
 interface TicketDto {
@@ -36,6 +37,10 @@ export const UsersHomePage = () => {
   const [searchDate, setSearchDate] = useState("");
   const [userId, setUserId] = useState<number | null>(null);
   const [myTickets, setMyTickets] = useState<TicketDto[]>([]);
+
+  const [hoveredFilmId, setHoveredFilmId] = useState<number | null>(null);
+  const [trailerUrl, setTrailerUrl] = useState<string | null>(null);
+  const [openDialog, setOpenDialog] = useState(false);
 
   useEffect(() => {
     fetchAll();
@@ -101,6 +106,16 @@ export const UsersHomePage = () => {
     }
   };
 
+  const fetchTrailer = async (filmId: number) => {
+    try {
+      const res = await api.get<{ url: string }>(`/video/trailers/${filmId}`);
+      setTrailerUrl(res.data.url);
+      setOpenDialog(true);
+    } catch {
+      toast.error("Не вдалося отримати трейлер");
+    }
+  };
+
   return (
     <Container>
       <ToastContainer />
@@ -114,43 +129,49 @@ export const UsersHomePage = () => {
 
       <Box display="flex" alignItems="center" gap={2} mb={2}>
         <Button variant="outlined" onClick={fetchAll}>Усі фільми</Button>
-        <TextField
-          label="Режисер"
-          value={searchDirector}
-          onChange={(e) => setSearchDirector(e.target.value)}
-        />
+
+        <TextField label="Режисер" value={searchDirector} onChange={(e) => setSearchDirector(e.target.value)} />
         <Button variant="outlined" onClick={fetchByDirector}>За режисером</Button>
 
-        <TextField
-          label="Назва"
-          value={searchTitle}
-          onChange={(e) => setSearchTitle(e.target.value)}
-        />
+        <TextField label="Назва" value={searchTitle} onChange={(e) => setSearchTitle(e.target.value)} />
         <Button variant="outlined" onClick={fetchByTitle}>За назвою</Button>
 
-        <TextField
-          label="Дата релізу"
-          type="date"
-          InputLabelProps={{ shrink: true }}
-          value={searchDate}
-          onChange={(e) => setSearchDate(e.target.value)}
-        />
+        <TextField label="Дата релізу" type="date" InputLabelProps={{ shrink: true }}
+          value={searchDate} onChange={(e) => setSearchDate(e.target.value)} />
         <Button variant="outlined" onClick={fetchByDate}>За датою</Button>
       </Box>
 
       <Typography variant="h5" gutterBottom>Список фільмів</Typography>
       <List>
-        {films.map((film) => (
-          <ListItem key={film.id}>
-            <Paper elevation={3} style={{ padding: "1rem", width: "100%" }}>
-              <Typography variant="h6">{film.title}</Typography>
-              <Typography>Жанр: {film.genre}</Typography>
-              <Typography>Режисер: {film.director}</Typography>
-              <Typography>Дата релізу: {new Date(film.releaseDate).toLocaleDateString()}</Typography>
-            </Paper>
-          </ListItem>
-        ))}
-      </List>
+  {films.map((film) => (
+    <ListItem key={film.id}>
+      <Paper
+        elevation={3}
+        style={{ padding: "1rem", width: "100%", position: "relative" }}
+        onMouseEnter={() => setHoveredFilmId(film.id)}
+        onMouseLeave={() => setHoveredFilmId(null)}
+      >
+        <Typography variant="h6">{film.title}</Typography>
+        <Typography>Жанр: {film.genre}</Typography>
+        <Typography>Режисер: {film.director}</Typography>
+        <Typography>
+          Дата релізу: {new Date(film.releaseDate).toLocaleDateString()}
+        </Typography>
+
+        {hoveredFilmId === film.id && (
+          <Button
+            variant="contained"
+            size="small"
+            style={{ position: "absolute", top: 10, right: 10 }}
+            onClick={() => fetchTrailer(film.id)}
+          >
+            Переглянути трейлер
+          </Button>
+        )}
+      </Paper>
+    </ListItem>
+  ))}
+</List>
 
       {myTickets.length > 0 && (
         <>
@@ -166,6 +187,18 @@ export const UsersHomePage = () => {
           </List>
         </>
       )}
+
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
+        <Box p={2}>
+          <Typography variant="h6" gutterBottom>Трейлер</Typography>
+          {trailerUrl && (
+            <video width="100%" controls>
+              <source src={trailerUrl} type="video/mp4" />
+              Ваш браузер не підтримує відтворення відео.
+            </video>
+          )}
+        </Box>
+      </Dialog>
     </Container>
   );
 };

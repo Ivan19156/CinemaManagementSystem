@@ -29,6 +29,7 @@ using Application.Interfaces.Common;
 using Infrastructure.Messaging;
 using CinemaManagementSystem.Infrastructure.Logging;
 
+using Application.Interfaces.BlobInterface;
 public class Program
 {
     public static async Task Main(string[] args)
@@ -70,6 +71,8 @@ public class Program
         services.AddScoped<IDiscountService, DiscountService>();
         services.AddScoped(typeof(IAppLogger<>), typeof(AppLogger<>));
         //services.AddScoped<IEventPublisher, RabbitMqEventPublisher>();
+        builder.Services.AddScoped(typeof(IAppLogger<>), typeof(AppLogger<>));
+        builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();
 
 
         // ---------- Authorization ----------
@@ -155,16 +158,16 @@ public class Program
         //builder.Services.AddScoped<IEventPublisher, RabbitMqEventPublisher>();
 
         // Після services.AddControllers() і перед Build()
-services.AddCors(options =>
-{
-    options.AddPolicy("AllowReactApp", builder =>
-    {
-        builder.WithOrigins("http://localhost:3000")
-               .AllowAnyHeader()
-               .AllowAnyMethod()
-               .AllowCredentials(); // <- Додай це для credentials
-    });
-});
+        services.AddCors(options =>
+        {
+            options.AddPolicy("AllowReactApp", builder =>
+            {
+                builder.WithOrigins("http://localhost:3000")
+                       .AllowAnyHeader()
+                       .AllowAnyMethod()
+                       .AllowCredentials(); // <- Додай це для credentials
+            });
+        });
 
 
         builder.Services.AddCommunication(builder.Configuration);
@@ -217,7 +220,7 @@ services.AddCors(options =>
         // });
 
         app.UseMiddleware<ExceptionHandlingMiddleware>();
-        
+
         app.UseCors("AllowReactApp");
         // app.UseHttpsRedirection(); // Optional for dev/test
         app.UseAuthentication();

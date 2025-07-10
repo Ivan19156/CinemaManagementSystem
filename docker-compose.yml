@@ -13,6 +13,8 @@ services:
     environment:
       - ASPNETCORE_URLS=http://*:8080 
       - DOTNET_USE_POLLING_FILE_WATCHER=1
+      - AzureBlobStorage__ConnectionString=${AzureBlobStorage__ConnectionString}
+      - AzureBlobStorage__ContainerName=${AzureBlobStorage__ContainerName}
     container_name: cinemanagement_webapi
     dns:
       - 8.8.8.8
